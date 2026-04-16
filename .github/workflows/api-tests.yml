@@ -8,7 +8,7 @@ on:
 
 jobs:
   smoke-tests:
-    name: Testes de Smoke
+    name: Smoke Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -26,9 +26,19 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Executar testes de smoke
-        run: pytest -m smoke --html=reports/smoke-report.html --self-contained-html --alluredir=reports/allure-results -v
+        run: |
+          pytest -m smoke \
+            --junitxml=reports/smoke-results.xml \
+            --html=reports/smoke-report.html \
+            --self-contained-html \
+            --alluredir=reports/allure-results \
+            -v 2>&1 | tee reports/smoke-output.txt
         env:
           BASE_URL: https://serverest.dev
+
+      - name: Gerar summary dos smoke tests
+        if: always()
+        run: python .github/scripts/generate_summary.py reports/smoke-results.xml "Smoke Tests" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload relatorio smoke
         if: always()
@@ -39,10 +49,13 @@ jobs:
           retention-days: 15
 
   regression-tests:
-    name: Suite de Regressao Completa
+    name: Regression Tests
     needs: smoke-tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      checks: write
 
     steps:
       - name: Checkout do codigo
@@ -58,9 +71,28 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Executar suite completa de regressao
-        run: pytest --html=reports/regression-report.html --self-contained-html --alluredir=reports/allure-results -v
+        id: run_tests
+        run: |
+          pytest \
+            --junitxml=reports/regression-results.xml \
+            --html=reports/regression-report.html \
+            --self-contained-html \
+            --alluredir=reports/allure-results \
+            -v 2>&1 | tee reports/regression-output.txt
         env:
           BASE_URL: https://serverest.dev
+
+      - name: Gerar summary da regressao
+        if: always()
+        run: python .github/scripts/generate_summary.py reports/regression-results.xml "Suite de Regressao Completa" >> $GITHUB_STEP_SUMMARY
+
+      - name: Publicar resultado dos testes
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: API Test Report
+          path: reports/regression-results.xml
+          reporter: java-junit
 
       - name: Upload relatorio de regressao
         if: always()
