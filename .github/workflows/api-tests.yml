@@ -1,0 +1,71 @@
+name: Testes API ServeRest
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke-tests:
+    name: Testes de Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Executar testes de smoke
+        run: pytest -m smoke --html=reports/smoke-report.html --self-contained-html --alluredir=reports/allure-results -v
+        env:
+          BASE_URL: https://serverest.dev
+
+      - name: Upload relatorio smoke
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-report
+          path: reports/
+          retention-days: 15
+
+  regression-tests:
+    name: Suite de Regressao Completa
+    needs: smoke-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Executar suite completa de regressao
+        run: pytest --html=reports/regression-report.html --self-contained-html --alluredir=reports/allure-results -v
+        env:
+          BASE_URL: https://serverest.dev
+
+      - name: Upload relatorio de regressao
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-test-report
+          path: reports/
+          retention-days: 30

@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.env
+.venv/
+venv/
+env/
+reports/
+.pytest_cache/
+.allure-results/
+*.html
+serverest-api-automation-main/
