@@ -25,14 +25,18 @@ jobs:
       - name: Instalar dependencias
         run: pip install -r requirements.txt
 
+      - name: Criar diretorio de reports
+        run: mkdir -p reports
+
       - name: Executar testes de smoke
+        id: smoke
         run: |
           pytest -m smoke \
             --junitxml=reports/smoke-results.xml \
             --html=reports/smoke-report.html \
             --self-contained-html \
             --alluredir=reports/allure-results \
-            -v 2>&1 | tee reports/smoke-output.txt
+            -v || echo "TESTS_FAILED=true" >> $GITHUB_ENV
         env:
           BASE_URL: https://serverest.dev
 
@@ -47,6 +51,10 @@ jobs:
           name: smoke-test-report
           path: reports/
           retention-days: 15
+
+      - name: Falhar se testes falharam
+        if: env.TESTS_FAILED == 'true'
+        run: exit 1
 
   regression-tests:
     name: Regression Tests
@@ -70,15 +78,18 @@ jobs:
       - name: Instalar dependencias
         run: pip install -r requirements.txt
 
+      - name: Criar diretorio de reports
+        run: mkdir -p reports
+
       - name: Executar suite completa de regressao
-        id: run_tests
+        id: regression
         run: |
           pytest \
             --junitxml=reports/regression-results.xml \
             --html=reports/regression-report.html \
             --self-contained-html \
             --alluredir=reports/allure-results \
-            -v 2>&1 | tee reports/regression-output.txt
+            -v || echo "TESTS_FAILED=true" >> $GITHUB_ENV
         env:
           BASE_URL: https://serverest.dev
 
@@ -101,3 +112,7 @@ jobs:
           name: regression-test-report
           path: reports/
           retention-days: 30
+
+      - name: Falhar se testes falharam
+        if: env.TESTS_FAILED == 'true'
+        run: exit 1
